@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacsFiber Subscriber Billing and Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 antialiased min-h-screen">
+
+    <!-- LOGIN SCREEN OVERLAY -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-3 bg-blue-600 rounded-2xl text-white mb-2 shadow-lg shadow-blue-500/30">
+                    <i data-lucide="wifi" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">TacsFiber Billing</h2>
+                <p class="text-sm text-gray-500">Sign in to manage subscribers & collections</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Username</label>
+                    <input type="text" id="login-user" required placeholder="Enter username" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+                    <input type="password" id="login-pass" required placeholder="Enter password" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <p id="login-error" class="text-xs text-red-500 hidden text-center font-medium">Invalid username or password.</p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow-md transition">
+                    Sign In
+                </button>
+            </form>
+            <div class="text-center border-t pt-4 text-xs text-gray-400">
+                Authorized Personnel Only &bull; TacsFiber Network
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN SYSTEM INTERFACE -->
+    <div id="app-content" class="flex h-screen overflow-hidden hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between hidden md:flex">
+            <div>
+                <div class="p-5 flex items-center gap-3 border-b border-slate-800">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white">
+                        <i data-lucide="wifi"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">TacsFiber</h1>
+                        <p class="text-xs text-slate-400">Billing & Management System</p>
+                    </div>
+                </div>
+                <nav class="p-4 space-y-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg bg-blue-600 text-white transition font-medium">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('subscribers')" id="nav-subscribers" class="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition font-medium">
+                        <i data-lucide="users" class="w-4 h-4"></i> Subscribers
+                    </button>
+                    <button onclick="switchTab('billing')" id="nav-billing" class="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition font-medium">
+                        <i data-lucide="receipt" class="w-4 h-4"></i> Billing & Payments
+                    </button>
+                    <button onclick="switchTab('reports')" id="nav-reports" class="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition font-medium">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reports & Data
+                    </button>
+                </nav>
+            </div>
+            
+            <!-- Sidebar GCash Banner -->
+            <div class="p-4 m-3 bg-slate-800 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-1">
+                <div class="flex items-center gap-1.5 font-semibold text-emerald-400">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> GCash Info
+                </div>
+                <p><span class="text-slate-400">Name:</span> Ronel Tacocong</p>
+                <p><span class="text-slate-400">No:</span> <span class="font-mono text-white">0960 462 2951</span></p>
+            </div>
+        </aside>
+
+        <!-- Main Viewport -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col">
+            <!-- Top Header -->
+            <header class="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+                <div class="flex items-center gap-3 md:hidden">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white">
+                        <i data-lucide="wifi" class="w-5 h-5"></i>
+                    </div>
+                    <span class="font-bold text-lg">TacsFiber</span>
+                </div>
+                <h2 id="page-title" class="text-xl font-bold text-gray-800 hidden md:block">Dashboard Overview</h2>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5">
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-600"></i> Ronel Tacocong
+                    </span>
+                    <button onclick="openAddSubscriberModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Add Subscriber
+                    </button>
+                    <button onclick="logout()" class="text-gray-400 hover:text-red-600 p-2 rounded-lg transition" title="Log Out">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Notification Toast -->
+            <div id="toast-banner" class="hidden mx-6 mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex justify-between items-center">
+                <span id="toast-message">Action successful!</span>
+                <button onclick="document.getElementById('toast-banner').classList.add('hidden')" class="text-emerald-600 hover:text-emerald-900"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="p-6 space-y-6">
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Subscribers</p>
+                            <h3 id="stat-active" class="text-2xl font-bold text-gray-800 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Today</p>
+                            <h3 id="stat-due-today" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                            <i data-lucide="calendar-clock" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overdue / Disconnected</p>
+                            <h3 id="stat-overdue" class="text-2xl font-bold text-red-600 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-red-50 text-red-600 rounded-xl">
+                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Collections</p>
+                            <h3 id="stat-revenue" class="text-2xl font-bold text-emerald-600 mt-1">₱0.00</h3>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <i data-lucide="wallet" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Due Today & Actions Table -->
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+                            <h3 class="font-bold text-gray-800">Due Today & Pending Accounts</h3>
+                        </div>
+                        <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-semibold" id="due-today-badge">0 Accounts</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                                    <th class="p-4">Subscriber</th>
+                                    <th class="p-4">Plan Rate</th>
+                                    <th class="p-4">Installed Date</th>
+                                    <th class="p-4">Due Date</th>
+                                    <th class="p-4">Balance</th>
+                                    <th class="p-4 text-center">Quick Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="due-today-table-body" class="divide-y divide-gray-100 text-sm">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBSCRIBERS VIEW -->
+            <div id="view-subscribers" class="p-6 space-y-6 hidden">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <div class="relative w-full md:w-96">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" id="search-subscribers" oninput="renderSubscribersTable()" placeholder="Search by name, ID, or phone..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <select id="filter-status" onchange="renderSubscribersTable()" class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ALL">All Statuses</option>
+                            <option value="Active">Active</option>
+                            <option value="Disconnected">Disconnected</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                                    <th class="p-4">Acc ID</th>
+                                    <th class="p-4">Subscriber Name</th>
+                                    <th class="p-4">Contact</th>
+                                    <th class="p-4">Plan Tier</th>
+                                    <th class="p-4">Date Installed</th>
+                                    <th class="p-4">Next Due Date</th>
+                                    <th class="p-4">Total Balance</th>
+                                    <th class="p-4">Status</th>
+                                    <th class="p-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscribers-table-body" class="divide-y divide-gray-100 text-sm">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BILLING & PAYMENTS VIEW -->
+            <div id="view-billing" class="p-6 space-y-6 hidden">
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            <i data-lucide="credit-card" class="w-5 h-5 text-emerald-600"></i> Record Payment
+                        </h3>
+                        <div class="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-200">
+                            <strong>GCash:</strong> Ronel Tacocong (0960 462 2951)
+                        </div>
+                    </div>
+
+                    <form id="payment-form" onsubmit="handleProcessPayment(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Select Subscriber</label>
+                            <select id="payment-subscriber-id" required onchange="autofillPaymentAmount()" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <!-- Dynamic Options -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Amount Paid (₱)</label>
+                            <input type="number" id="payment-amount" required step="0.01" min="0" placeholder="0.00" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-emerald-700">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+                            <select id="payment-method" required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="GCash">GCash</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Payment Date</label>
+                            <input type="date" id="payment-date" required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Reference No. (Optional)</label>
+                            <input type="text" id="payment-ref-no" placeholder="GCash Ref # or OR #" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="md:col-span-2 flex items-end">
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-medium shadow-sm transition flex items-center justify-center gap-2">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i> Process Payment & Issue Receipt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800">Payment Transaction Logs</h3>
+                        <span class="text-xs text-gray-500">Encoder: <strong>Ronel Tacocong</strong></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                                    <th class="p-4">Ref No.</th>
+                                    <th class="p-4">Subscriber</th>
+                                    <th class="p-4">Date Paid</th>
+                                    <th class="p-4">Method</th>
+                                    <th class="p-4">Amount Paid</th>
+                                    <th class="p-4 text-center">Receipt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billing-history-table-body" class="divide-y divide-gray-100 text-sm">
+                                <!-- Dynamic Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPORTS VIEW -->
+            <div id="view-reports" class="p-6 space-y-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            <i data-lucide="database" class="w-5 h-5 text-blue-600"></i> Backup & Data Management
+                        </h3>
+                        <p class="text-sm text-gray-500">Export system records to a JSON file or import previously saved backup data.</p>
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                                <i data-lucide="download" class="w-4 h-4"></i> Export JSON Backup
+                            </button>
+                            <label class="bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer transition">
+                                <i data-lucide="upload" class="w-4 h-4"></i> Import JSON Data
+                                <input type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-4">
+                        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            <i data-lucide="building-2" class="w-5 h-5 text-indigo-600"></i> Business & GCash Profile
+                        </h3>
+                        <div class="text-sm space-y-2 bg-gray-50 p-4 rounded-lg border">
+                            <p><strong>Provider Name:</strong> TacsFiber Network Services</p>
+                            <p><strong>System Admin / Encoder:</strong> Ronel Tacocong</p>
+                            <p><strong>GCash Account Name:</strong> Ronel Tacocong</p>
+                            <p><strong>GCash Number:</strong> <span class="font-mono text-emerald-700 font-semibold">0960 462 2951</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: ADD SUBSCRIBER -->
+    <div id="modal-add-subscriber" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl relative">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Add New Subscriber</h3>
+                <button onclick="closeAddSubscriberModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="add-subscriber-form" onsubmit="handleAddSubscriber(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Full Name</label>
+                    <input type="text" id="sub-name" required placeholder="Juan Dela Cruz" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Contact Mobile Number</label>
+                    <input type="text" id="sub-contact" required placeholder="09123456789" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Select Plan Tier</label>
+                    <select id="sub-plan-select" required onchange="handlePlanSelectChange()" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <!-- Dynamic Plans -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Monthly Rate (₱)</label>
+                    <input type="number" id="sub-plan-rate" readonly class="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 font-bold text-blue-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Date Installed</label>
+                    <input type="date" id="sub-date-installed" required class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-2 border-t">
+                    <button type="button" onclick="closeAddSubscriberModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm">Save Subscriber</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SMS REMINDER -->
+    <div id="modal-sms" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl relative">
+            <div class="flex justify-between items-center mb-3 border-b pb-2">
+                <h3 class="text-md font-bold text-gray-800 flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-4 h-4 text-blue-600"></i> Payment Reminder SMS
+                </h3>
+                <button onclick="closeSmsModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-gray-500 mb-3">Copy and send this pre-formatted message via SMS or Messenger:</p>
+            <textarea id="sms-text" rows="7" class="w-full border p-3 rounded-lg text-xs font-mono bg-gray-50 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500" readonly></textarea>
+            <div class="flex justify-end gap-3 mt-4">
+                <button type="button" onclick="closeSmsModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Close</button>
+                <button type="button" onclick="copySmsText()" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center gap-2">
+                    <i data-lucide="copy" class="w-4 h-4"></i> Copy Message
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINTABLE TEMPLATE (Receipt / Notice Container) -->
+    <div id="printable-area" class="hidden"></div>
+
+    <script>
+        // System Internet Plans Base
+        const PLANS = [
+            { speed: "10Mbps", price: 500 },
+            { speed: "15Mbps", price: 600 },
+            { speed: "25Mbps", price: 699 },
+            { speed: "30Mbps", price: 899 },
+            { speed: "35Mbps", price: 999 },
+            { speed: "40Mbps", price: 1299 },
+            { speed: "50Mbps", price: 1499 },
+            { speed: "75Mbps", price: 1799 },
+            { speed: "100Mbps", price: 2199 },
+            { speed: "200Mbps", price: 2499 },
+            { speed: "300Mbps", price: 3499 }
+        ];
+
+        const GCASH_INFO = {
+            name: "Ronel Tacocong",
+            number: "0960 462 2951"
+        };
+
+        // Pre-seeded Initial Data (Includes Rolando Tacocong)
+        const INITIAL_SUBSCRIBERS = [
+            {
+                id: 'TF-100101',
+                name: 'Rolando Tacocong',
+                contact: '09123456789',
+                planTier: '50Mbps',
+                planRate: 1499,
+                dateInstalled: '2024-09-18',
+                balance: 1499,
+                status: 'Active',
+                lastAccruedMonth: '2026-10-01'
+            }
+        ];
+
+        let subscribers = JSON.parse(localStorage.getItem('tacs_subscribers_v3')) || INITIAL_SUBSCRIBERS;
+        let transactions = JSON.parse(localStorage.getItem('tacs_transactions_v3')) || [];
+
+        // App Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            populatePlanOptions();
+            runAutoAccrualEngine();
+            document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+            lucide.createIcons();
+
+            // Check Login Status
+            if (sessionStorage.getItem('tacs_authenticated') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                refreshUI();
+            }
+        });
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value.trim();
+
+            if (u === 'Ronel Tacocong' && p === 'Gege@635185') {
+                sessionStorage.setItem('tacs_authenticated', 'true');
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                refreshUI();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('tacs_authenticated');
+            location.reload();
+        }
+
+        function populatePlanOptions() {
+            const select = document.getElementById('sub-plan-select');
+            select.innerHTML = '';
+            PLANS.forEach((p, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = `${p.speed} - ₱${p.price.toLocaleString()}/mo`;
+                select.appendChild(opt);
+            });
+            handlePlanSelectChange();
+        }
+
+        function handlePlanSelectChange() {
+            const index = document.getElementById('sub-plan-select').value;
+            if (PLANS[index]) {
+                document.getElementById('sub-plan-rate').value = PLANS[index].price;
+            }
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'subscribers', 'billing', 'reports'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).classList.remove('bg-blue-600', 'text-white');
+                document.getElementById(`nav-${t}`).classList.add('text-slate-400');
+            });
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).classList.add('bg-blue-600', 'text-white');
+            document.getElementById(`nav-${tab}`).classList.remove('text-slate-400');
+
+            const titles = {
+                dashboard: 'Dashboard Overview',
+                subscribers: 'Subscriber Management',
+                billing: 'Billing & Payment Processing',
+                reports: 'Reports & System Data'
+            };
+            document.getElementById('page-title').innerText = titles[tab];
+            
+            refreshUI();
+        }
+
+        // Automated Monthly Balance Accrual & Disconnection Engine
+        function calculateDueDate(dateInstalledStr) {
+            const installed = new Date(dateInstalledStr);
+            const today = new Date();
+            let dueYear = today.getFullYear();
+            let dueMonth = today.getMonth();
+
+            let candidate = new Date(dueYear, dueMonth, installed.getDate());
+            if (candidate.getMonth() !== dueMonth) {
+                candidate = new Date(dueYear, dueMonth + 1, 0);
+            }
+            return candidate;
+        }
+
+        function runAutoAccrualEngine() {
+            const today = new Date();
+            let stateUpdated = false;
+
+            subscribers.forEach(sub => {
+                const installed = new Date(sub.dateInstalled);
+                const dueDay = installed.getDate();
+                const lastAccrued = sub.lastAccruedMonth ? new Date(sub.lastAccruedMonth) : new Date(sub.dateInstalled);
+
+                let monthsPassed = (today.getFullYear() - lastAccrued.getFullYear()) * 12 + (today.getMonth() - lastAccrued.getMonth());
+
+                if (monthsPassed > 0 && today.getDate() >= dueDay) {
+                    sub.balance = (parseFloat(sub.balance) || 0) + (parseFloat(sub.planRate) * monthsPassed);
+                    sub.lastAccruedMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+                    stateUpdated = true;
+                }
+
+                // Disconnection trigger (2+ unpaid months)
+                if (sub.balance >= (sub.planRate * 2) && sub.status === 'Active') {
+                    sub.status = 'Disconnected';
+                    stateUpdated = true;
+                }
+            });
+
+            if (stateUpdated) saveData();
+        }
+
+        function isDueToday(dateInstalledStr) {
+            const dueDate = calculateDueDate(dateInstalledStr);
+            const today = new Date();
+            return dueDate.getDate() === today.getDate() &&
+                   dueDate.getMonth() === today.getMonth() &&
+                   dueDate.getFullYear() === today.getFullYear();
+        }
+
+        function refreshUI() {
+            renderDashboard();
+            renderSubscribersTable();
+            renderBillingOptions();
+            renderBillingHistory();
+            lucide.createIcons();
+        }
+
+        function renderDashboard() {
+            const activeSubscribers = subscribers.filter(s => s.status === 'Active');
+            document.getElementById('stat-active').innerText = activeSubscribers.length;
+
+            const dueTodayCount = subscribers.filter(s => isDueToday(s.dateInstalled)).length;
+            document.getElementById('stat-due-today').innerText = dueTodayCount;
+            document.getElementById('stat-overdue').innerText = subscribers.filter(s => s.status === 'Disconnected' || s.balance >= (s.planRate * 2)).length;
+
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const monthlyRevenue = transactions
+                .filter(t => {
+                    const d = new Date(t.date);
+                    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                })
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+            document.getElementById('stat-revenue').innerText = `₱${monthlyRevenue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+            const tbody = document.getElementById('due-today-table-body');
+            tbody.innerHTML = '';
+            
+            const dueList = subscribers.filter(s => isDueToday(s.dateInstalled) || s.balance > 0);
+            document.getElementById('due-today-badge').innerText = `${dueList.length} Accounts Pending`;
+
+            if (dueList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">No pending accounts or payments due today.</td></tr>`;
+                return;
+            }
+
+            dueList.forEach(sub => {
+                const dueDate = calculateDueDate(sub.dateInstalled);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-gray-800">${sub.name}</td>
+                    <td class="p-4">${sub.planTier} (₱${sub.planRate})</td>
+                    <td class="p-4 text-gray-600">${sub.dateInstalled}</td>
+                    <td class="p-4 text-amber-600 font-semibold">${dueDate.toISOString().split('T')[0]}</td>
+                    <td class="p-4 font-bold text-red-600">₱${parseFloat(sub.balance).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td class="p-4 text-center space-x-1">
+                        <button onclick="quickPay('${sub.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium">Pay</button>
+                        <button onclick="openSmsModal('${sub.id}')" class="bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs font-medium">SMS</button>
+                        ${sub.balance >= (sub.planRate * 2) ? `<button onclick="printDisconnectionNotice('${sub.id}')" class="bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 px-2.5 py-1 rounded-lg text-xs font-medium">Notice</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderSubscribersTable() {
+            const tbody = document.getElementById('subscribers-table-body');
+            const search = document.getElementById('search-subscribers').value.toLowerCase();
+            const filter = document.getElementById('filter-status').value;
+
+            tbody.innerHTML = '';
+
+            const filtered = subscribers.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(search) || s.id.toLowerCase().includes(search) || s.contact.includes(search);
+                const matchesStatus = filter === 'ALL' || s.status === filter;
+                return matchesSearch && matchesStatus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-400">No subscribers found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(sub => {
+                const nextDue = calculateDueDate(sub.dateInstalled);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="p-4 text-xs font-mono text-gray-500">${sub.id}</td>
+                    <td class="p-4 font-bold text-gray-800">${sub.name}</td>
+                    <td class="p-4 text-gray-600 text-xs">${sub.contact}</td>
+                    <td class="p-4 font-medium text-blue-700">${sub.planTier} (₱${sub.planRate})</td>
+                    <td class="p-4 text-gray-600">${sub.dateInstalled}</td>
+                    <td class="p-4 text-gray-700 font-medium">${nextDue.toISOString().split('T')[0]}</td>
+                    <td class="p-4 font-bold ${sub.balance > 0 ? 'text-red-600' : 'text-emerald-600'}">₱${parseFloat(sub.balance).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
+                            ${sub.status}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick="toggleStatus('${sub.id}')" class="text-xs text-blue-600 hover:underline font-medium">${sub.status === 'Active' ? 'Disconnect' : 'Reconnect'}</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderBillingOptions() {
+            const select = document.getElementById('payment-subscriber-id');
+            select.innerHTML = '<option value="">-- Choose Subscriber --</option>';
+            subscribers.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub.id;
+                opt.innerText = `${sub.name} [Bal: ₱${sub.balance}] (${sub.planTier})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function autofillPaymentAmount() {
+            const subId = document.getElementById('payment-subscriber-id').value;
+            const sub = subscribers.find(s => s.id === subId);
+            if (sub) {
+                document.getElementById('payment-amount').value = sub.balance > 0 ? sub.balance : sub.planRate;
+            }
+        }
+
+        function quickPay(subId) {
+            switchTab('billing');
+            document.getElementById('payment-subscriber-id').value = subId;
+            autofillPaymentAmount();
+        }
+
+        function handleAddSubscriber(e) {
+            e.preventDefault();
+            const name = document.getElementById('sub-name').value;
+            const contact = document.getElementById('sub-contact').value;
+            const planIdx = document.getElementById('sub-plan-select').value;
+            const dateInstalled = document.getElementById('sub-date-installed').value;
+
+            const plan = PLANS[planIdx];
+
+            const newSub = {
+                id: 'TF-' + Math.floor(100000 + Math.random() * 900000),
+                name,
+                contact,
+                planTier: plan.speed,
+                planRate: plan.price,
+                dateInstalled,
+                balance: plan.price,
+                status: 'Active',
+                lastAccruedMonth: new Date().toISOString()
+            };
+
+            subscribers.push(newSub);
+            saveData();
+            closeAddSubscriberModal();
+            showToast(`Subscriber ${name} added successfully!`);
+            refreshUI();
+        }
+
+        function handleProcessPayment(e) {
+            e.preventDefault();
+            const subId = document.getElementById('payment-subscriber-id').value;
+            const amount = parseFloat(document.getElementById('payment-amount').value);
+            const method = document.getElementById('payment-method').value;
+            const date = document.getElementById('payment-date').value;
+            const refNo = document.getElementById('payment-ref-no').value;
+
+            const sub = subscribers.find(s => s.id === subId);
+            if (!sub) return;
+
+            sub.balance = Math.max(0, sub.balance - amount);
+
+            if (sub.status === 'Disconnected' && sub.balance < (sub.planRate * 2)) {
+                sub.status = 'Active';
+            }
+
+            const transaction = {
+                ref: refNo || ('TRX-' + Date.now()),
+                subId: sub.id,
+                subName: sub.name,
+                amount,
+                method,
+                date,
+                remainingBalance: sub.balance
+            };
+
+            transactions.unshift(transaction);
+            saveData();
+            refreshUI();
+            printReceipt(transaction);
+            document.getElementById('payment-form').reset();
+            showToast('Payment recorded and receipt generated!');
+        }
+
+        function renderBillingHistory() {
+            const tbody = document.getElementById('billing-history-table-body');
+            tbody.innerHTML = '';
+
+            transactions.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono text-xs text-gray-500">${t.ref}</td>
+                    <td class="p-4 font-semibold text-gray-800">${t.subName}</td>
+                    <td class="p-4 text-gray-600">${t.date}</td>
+                    <td class="p-4"><span class="px-2 py-0.5 bg-gray-100 rounded text-xs">${t.method}</span></td>
+                    <td class="p-4 font-bold text-emerald-600">₱${parseFloat(t.amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="p-4 text-center">
+                        <button onclick='printReceipt(${JSON.stringify(t)})' class="text-gray-500 hover:text-blue-600">
+                            <i data-lucide="printer" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Print Official Receipt Voucher
+        function printReceipt(t) {
+            const printArea = document.getElementById('printable-area');
+            printArea.innerHTML = `
+                <div class="p-8 bg-white text-black font-mono text-sm max-w-sm mx-auto">
+                    <div class="text-center border-b pb-3 mb-3">
+                        <h1 class="text-lg font-bold">TACSFIBER NETWORK SERVICES</h1>
+                        <p class="text-xs">Internet Service Provider</p>
+                        <p class="text-xs mt-1">GCash Payment: 0960 462 2951</p>
+                    </div>
+                    <div class="text-center font-bold text-xs uppercase mb-4">Official Payment Receipt</div>
+                    
+                    <div class="space-y-1 text-xs mb-4">
+                        <div class="flex justify-between"><span>Receipt Ref:</span><span class="font-bold">${t.ref}</span></div>
+                        <div class="flex justify-between"><span>Payment Date:</span><span>${t.date}</span></div>
+                        <div class="flex justify-between"><span>Subscriber:</span><span class="font-bold">${t.subName}</span></div>
+                        <div class="flex justify-between"><span>Account ID:</span><span>${t.subId}</span></div>
+                        <div class="flex justify-between"><span>Payment Method:</span><span>${t.method}</span></div>
+                    </div>
+
+                    <div class="border-t border-b py-3 my-3 space-y-1 text-xs">
+                        <div class="flex justify-between font-bold text-sm">
+                            <span>Amount Paid:</span>
+                            <span>₱${parseFloat(t.amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600">
+                            <span>Remaining Balance:</span>
+                            <span>₱${parseFloat(t.remainingBalance || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-center text-xs space-y-1">
+                        <p>Encoded by: <strong>Ronel Tacocong</strong></p>
+                        <p class="text-[10px] text-gray-500 mt-2">Thank you for choosing TacsFiber!</p>
+                    </div>
+                </div>
+            `;
+            window.print();
+        }
+
+        // Print Formal Disconnection Notice
+        function printDisconnectionNotice(subId) {
+            const sub = subscribers.find(s => s.id === subId);
+            if (!sub) return;
+
+            const printArea = document.getElementById('printable-area');
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            printArea.innerHTML = `
+                <div class="p-10 bg-white text-gray-900 font-sans max-w-2xl mx-auto border border-gray-300 rounded-lg">
+                    <div class="text-center border-b-2 border-red-600 pb-4 mb-6">
+                        <h1 class="text-2xl font-black text-red-600 uppercase tracking-wide">TACSFIBER NETWORK SERVICES</h1>
+                        <p class="text-xs text-gray-500 uppercase tracking-widest">High-Speed Fiber Internet Provider</p>
+                        <p class="text-xs font-semibold text-gray-700 mt-1">GCash Account: Ronel Tacocong (0960 462 2951)</p>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-6 text-sm">
+                        <div>
+                            <p class="text-xs text-gray-500">DATE ISSUED:</p>
+                            <p class="font-bold">${todayStr}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="bg-red-100 text-red-800 font-bold px-3 py-1 rounded text-xs border border-red-300">NOTICE OF DISCONNECTION</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg border mb-6 text-sm space-y-1">
+                        <p><strong>SUBSCRIBER NAME:</strong> ${sub.name}</p>
+                        <p><strong>ACCOUNT NUMBER:</strong> <span class="font-mono">${sub.id}</span></p>
+                        <p><strong>PLAN SUBSCRIPTION:</strong> ${sub.planTier} (₱${sub.planRate}/month)</p>
+                        <p><strong>OVERDUE BALANCE:</strong> <span class="text-red-600 font-bold">₱${parseFloat(sub.balance).toLocaleString('en-US', {minimumFractionDigits: 2})}</span></p>
+                    </div>
+
+                    <div class="space-y-3 text-xs leading-relaxed text-gray-700 mb-8">
+                        <p>Dear <strong>${sub.name}</strong>,</p>
+                        <p>Our records indicate that your fiber internet service account has an overdue balance of <strong>₱${sub.balance.toLocaleString()}</strong>, which remains unpaid past the due date.</p>
+                        <p>To avoid temporary disconnection of your fiber internet line, please settle your overdue account within <strong>24 to 48 hours</strong> upon receipt of this notice.</p>
+                        <p>Payments can be made via GCash:</p>
+                        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded text-emerald-900 font-medium">
+                            <p><strong>GCash Name:</strong> Ronel Tacocong</p>
+                            <p><strong>GCash Number:</strong> 0960 462 2951</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 border-t flex justify-between items-end text-xs">
+                        <div>
+                            <p class="text-gray-500">Issued by:</p>
+                            <p class="font-bold text-gray-900 mt-4">RONEL TACOCONG</p>
+                            <p class="text-gray-500 text-[10px]">TacsFiber System Administrator</p>
+                        </div>
+                        <div class="text-right text-[10px] text-gray-400">
+                            <p>This is a system-generated official notice.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            window.print();
+        }
+
+        function openSmsModal(subId) {
+            const sub = subscribers.find(s => s.id === subId);
+            if (!sub) return;
+
+            const dueDate = calculateDueDate(sub.dateInstalled).toISOString().split('T')[0];
+            const text = `Good day ${sub.name},\n\nThis is a friendly payment reminder from TacsFiber Network Services.\n\nAccount ID: ${sub.id}\nPlan: ${sub.planTier}\nTotal Balance Due: ₱${sub.balance.toLocaleString()}\nDue Date: ${dueDate}\n\nPlease settle via GCash to avoid connection disruption:\nGCash Name: ${GCASH_INFO.name}\nGCash Number: ${GCASH_INFO.number}\n\nThank you for your prompt payment!`;
+
+            document.getElementById('sms-text').value = text;
+            document.getElementById('modal-sms').classList.remove('hidden');
+        }
+
+        function closeSmsModal() {
+            document.getElementById('modal-sms').classList.add('hidden');
+        }
+
+        function copySmsText() {
+            const text = document.getElementById('sms-text').value;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Reminder message copied to clipboard!");
+                closeSmsModal();
+            }).catch(() => {
+                const input = document.createElement('textarea');
+                input.value = text;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showToast("Reminder message copied!");
+                closeSmsModal();
+            });
+        }
+
+        function openAddSubscriberModal() {
+            document.getElementById('modal-add-subscriber').classList.remove('hidden');
+        }
+
+        function closeAddSubscriberModal() {
+            document.getElementById('modal-add-subscriber').classList.add('hidden');
+            document.getElementById('add-subscriber-form').reset();
+        }
+
+        function toggleStatus(subId) {
+            const sub = subscribers.find(s => s.id === subId);
+            if (sub) {
+                sub.status = sub.status === 'Active' ? 'Disconnected' : 'Active';
+                saveData();
+                refreshUI();
+                showToast(`Subscriber ${sub.name} is now ${sub.status}.`);
+            }
+        }
+
+        function showToast(msg) {
+            const banner = document.getElementById('toast-banner');
+            document.getElementById('toast-message').innerText = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 4000);
+        }
+
+        function saveData() {
+            localStorage.setItem('tacs_subscribers_v3', JSON.stringify(subscribers));
+            localStorage.setItem('tacs_transactions_v3', JSON.stringify(transactions));
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ subscribers, transactions }, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `TacsFiber_Backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.subscribers && parsed.transactions) {
+                        subscribers = parsed.subscribers;
+                        transactions = parsed.transactions;
+                        saveData();
+                        refreshUI();
+                        showToast('Data imported successfully!');
+                    } else {
+                        alert('Invalid JSON file format.');
+                    }
+                } catch (err) {
+                    alert('Failed to parse JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
